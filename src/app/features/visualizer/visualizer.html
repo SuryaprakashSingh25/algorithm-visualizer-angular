@@ -1,0 +1,29 @@
+<div class="container">
+  <h1>Algorithm Visualizer</h1>
+
+  <div class="controls">
+    <button (click)="generateArray()">Generate Array</button>
+    <button (click)="startSort(bubbleSortAlgo)">Start Bubble Sort</button>
+    <button (click)="nextStep()">Next Step</button>
+
+    <button (click)="play()" [disabled]="isPlaying">Play</button>
+    <button (click)="pause()" [disabled]="!isPlaying">Pause</button>
+  </div>
+
+  <div class="array-container">
+    <div
+      class="bar"
+      *ngFor="let value of array; let i = index"
+      [style.height.px]="value * 3"
+      [class.compare]="
+        currentStepType === 'compare' && activeIndices.includes(i)
+      "
+      [class.swap]="currentStepType === 'swap' && activeIndices.includes(i)"
+    ></div>
+  </div>
+
+  <label>
+    Speed:
+    <input type="range" min="200" max="2000" step="100" [(ngModel)]="speed" />
+  </label>
+</div>
