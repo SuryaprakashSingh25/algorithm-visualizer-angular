@@ -3,6 +3,7 @@ import { Component, ChangeDetectorRef } from '@angular/core';
 import { SortStep } from '../../shared/models/step.model';
 import { bubbleSort } from '../../core/algorithms/bubble-sort';
 import { FormsModule } from '@angular/forms';
+import { mergeSort } from '../../core/algorithms/merge-sort';
 
 @Component({
   selector: 'app-visualizer',
@@ -14,13 +15,18 @@ export class VisualizerComponent {
   array: number[]=[];
   steps: SortStep[]=[];
   currentStep=0;
-  currentStepType: 'compare' | 'swap' | null = null;
+  currentStepType: 'compare' | 'swap' | 'overwrite' | null = null;
   activeIndices: number[]=[];
+  sortedIndices: number[]=[];
   originalArray: number[] = [];
   isPlaying=false;
   intervalId: any;
   speed=1000;
   bubbleSortAlgo = bubbleSort;
+  mergeSortAlgo=mergeSort;
+  
+  mergeInfo: any = null;
+  statusMessage = '';
 
 
   constructor(private cd: ChangeDetectorRef) {}
@@ -33,6 +39,9 @@ export class VisualizerComponent {
     this.steps=[];
     this.currentStep=-1;
     this.activeIndices=[];
+    this.sortedIndices=[];
+    this.mergeInfo=null;
+    this.statusMessage='';
   }
 
   startSort(algorithm: (arr: number[]) => SortStep[]) {
@@ -48,28 +57,55 @@ export class VisualizerComponent {
       this.currentStep++;
       const step = this.steps[this.currentStep];
       this.array = [...step.array];
-
-      this.activeIndices = step.compare ?? step.swap ?? [];
+      this.activeIndices = step.compare ?? step.swap ?? step.overwrite ?? [];
+      this.sortedIndices = step.sorted ?? [];
+      this.mergeInfo = step.mergeInfo || null;
+      this.updateStatusMessage();
     }
   }
 
+  updateStatusMessage(){
+    if (!this.mergeInfo) {
+      this.statusMessage = '';
+      return;
+    }
+
+    const {level, left, right, operation} = this.mergeInfo;
+    const range = `[${left}..${right}]`;
+    
+    switch(operation){
+      case 'dividing':
+        this.statusMessage = `Level ${level}: Dividing array ${range}`;
+        break;
+      case 'merging_compare':
+        this.statusMessage = `Level ${level}: Comparing & merging array ${range}`;
+        break;
+      case 'merging_write':
+        this.statusMessage = `Level ${level}: Writing merged values for ${range}`;
+        break;
+      case 'merged':
+        this.statusMessage = `Level ${level}: Finished merging ${range}`;
+        break;
+      default:
+        this.statusMessage = '';
+    }
+  }
 
   async play() {
     if (this.isPlaying) return;
     
-    // If no steps generated yet, generate them from the original array.
     if (!this.steps.length) {
       if (!this.originalArray || !this.originalArray.length) {
         this.generateArray();
       }
-      this.startSort(this.bubbleSortAlgo);
+      this.startSort(this.mergeSortAlgo);
     }
 
-    // If we've already reached the end, restart from beginning.
     if (this.currentStep >= this.steps.length - 1) {
       this.currentStep = -1;
       this.array = [...this.originalArray];
       this.activeIndices = [];
+      this.sortedIndices = [];
     }
 
     this.isPlaying = true;
@@ -77,14 +113,17 @@ export class VisualizerComponent {
     while (this.isPlaying && this.currentStep < this.steps.length - 1) {
       this.currentStep++;
       const step = this.steps[this.currentStep];
+      
+      this.activeIndices = step.compare ?? step.swap ?? step.overwrite ?? [];
+      this.sortedIndices = step.sorted ?? [];
+      this.mergeInfo = step.mergeInfo || null;
+      this.updateStatusMessage();
+
       this.currentStepType = step.type;
-      // Phase 1: highlight comparison or swap indices
-      this.activeIndices = step.compare ?? step.swap ?? [];
       this.cd.detectChanges();
       await this.waitForPaint();
       await this.delay(this.speed / 2);
 
-      // Phase 2: apply array change (if any) so bars move
       this.array = [...step.array];
       this.cd.detectChanges();
       await this.waitForPaint();
@@ -92,10 +131,11 @@ export class VisualizerComponent {
     }
 
     this.activeIndices = [];
+    this.sortedIndices = [];
+    this.statusMessage = 'Sorting complete!';
     this.cd.detectChanges();
     this.isPlaying = false;
 }
-
 
   delay(ms:number){
     return new Promise(resolve => setTimeout(resolve,ms));
@@ -118,6 +158,9 @@ export class VisualizerComponent {
     this.array=[...this.originalArray];
     this.currentStep=-1;
     this.activeIndices=[];
+    this.sortedIndices=[];
+    this.mergeInfo=null;
+    this.statusMessage='';
     this.cd.detectChanges();
   }
 

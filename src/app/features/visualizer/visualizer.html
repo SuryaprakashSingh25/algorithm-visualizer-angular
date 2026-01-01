@@ -3,11 +3,20 @@
 
   <div class="controls">
     <button (click)="generateArray()">Generate Array</button>
-    <button (click)="startSort(bubbleSortAlgo)">Start Bubble Sort</button>
+    <button (click)="startSort(mergeSortAlgo)">Start Merge Sort</button>
     <button (click)="nextStep()">Next Step</button>
 
     <button (click)="play()" [disabled]="isPlaying">Play</button>
     <button (click)="pause()" [disabled]="!isPlaying">Pause</button>
+  </div>
+
+  <div class="info-panel" *ngIf="statusMessage">
+    <div class="status-message">{{ statusMessage }}</div>
+    <div class="merge-ranges" *ngIf="mergeInfo">
+      <span class="range-label">Active Range:</span>
+      <span class="range-values">[{{ mergeInfo.left }}..{{ mergeInfo.right }}]</span>
+      <span class="level-label">Level {{ mergeInfo.level }}</span>
+    </div>
   </div>
 
   <div class="array-container">
@@ -19,6 +28,10 @@
         currentStepType === 'compare' && activeIndices.includes(i)
       "
       [class.swap]="currentStepType === 'swap' && activeIndices.includes(i)"
+      [class.overwrite]="
+        currentStepType === 'overwrite' && activeIndices.includes(i)
+      "
+      [class.sorted]="sortedIndices.includes(i)"
     ></div>
   </div>
 
