@@ -12,6 +12,8 @@ export interface SortStep{
         mid: number;
         leftPointer?: number;
         rightPointer?: number;
+        target?: number;
+        midValue?: number;
         operation: 'dividing' | 'merging_compare' | 'merging_write' | 'merged';
     };
 }

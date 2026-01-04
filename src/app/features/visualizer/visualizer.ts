@@ -4,6 +4,13 @@ import { SortStep } from '../../shared/models/step.model';
 import { bubbleSort } from '../../core/algorithms/bubble-sort';
 import { FormsModule } from '@angular/forms';
 import { mergeSort } from '../../core/algorithms/merge-sort';
+import { binarySearch } from '../../core/algorithms/binary-search';
+
+interface Algorithm {
+  id: string;
+  name: string;
+  func: (arr: number[], target?: number) => SortStep[];
+}
 
 @Component({
   selector: 'app-visualizer',
@@ -24,9 +31,18 @@ export class VisualizerComponent {
   speed=1000;
   bubbleSortAlgo = bubbleSort;
   mergeSortAlgo=mergeSort;
+  binarySearchAlgo=binarySearch;
   
   mergeInfo: any = null;
   statusMessage = '';
+  selectedAlgorithm: string = 'merge-sort';
+  searchLeft: number = -1;
+  searchRight: number = -1;
+  algorithms: Algorithm[] = [
+    { id: 'bubble-sort', name: 'Bubble Sort', func: bubbleSort },
+    { id: 'merge-sort', name: 'Merge Sort', func: mergeSort },
+    { id: 'binary-search', name: 'Binary Search', func: binarySearch }
+  ];
 
 
   constructor(private cd: ChangeDetectorRef) {}
@@ -44,10 +60,16 @@ export class VisualizerComponent {
     this.statusMessage='';
   }
 
-  startSort(algorithm: (arr: number[]) => SortStep[]) {
+  startSort(algorithm: (arr: number[], target?: number) => SortStep[]) {
     const tempArray = [...this.originalArray];
-    this.steps = algorithm(tempArray);
+    const target = this.selectedAlgorithm === 'binary-search' ? Math.floor(Math.random() * 100) + 1 : undefined;
+    this.steps = algorithm(tempArray, target);
     this.reset();
+  }
+
+  getSelectedAlgorithm(): (arr: number[], target?: number) => SortStep[] {
+    const algo = this.algorithms.find(a => a.id === this.selectedAlgorithm);
+    return algo ? algo.func : mergeSort;
   }
 
   nextStep() {
@@ -60,6 +82,17 @@ export class VisualizerComponent {
       this.activeIndices = step.compare ?? step.swap ?? step.overwrite ?? [];
       this.sortedIndices = step.sorted ?? [];
       this.mergeInfo = step.mergeInfo || null;
+      this.currentStepType = step.type;
+      
+      // Track search boundaries for binary search
+      if (this.selectedAlgorithm === 'binary-search' && this.mergeInfo) {
+        this.searchLeft = this.mergeInfo.left;
+        this.searchRight = this.mergeInfo.right;
+      } else {
+        this.searchLeft = -1;
+        this.searchRight = -1;
+      }
+      
       this.updateStatusMessage();
     }
   }
@@ -71,20 +104,38 @@ export class VisualizerComponent {
     }
 
     const {level, left, right, operation} = this.mergeInfo;
-    const range = `[${left}..${right}]`;
     
     switch(operation){
       case 'dividing':
-        this.statusMessage = `Level ${level}: Dividing array ${range}`;
+        this.statusMessage = `Level ${level}: Dividing array [${left}..${right}]`;
         break;
       case 'merging_compare':
-        this.statusMessage = `Level ${level}: Comparing & merging array ${range}`;
+        if (this.selectedAlgorithm === 'binary-search') {
+          const target = (this.mergeInfo as any).target;
+          const midValue = (this.mergeInfo as any).midValue;
+          const mid = this.mergeInfo.mid;
+          
+          if (midValue < target) {
+            this.statusMessage = `Level ${level}: Target=${target} | Mid[${mid}]=${midValue} (too small) | Lower Bound: ${left}, Upper Bound: ${right} → Search RIGHT`;
+          } else if (midValue > target) {
+            this.statusMessage = `Level ${level}: Target=${target} | Mid[${mid}]=${midValue} (too large) | Lower Bound: ${left}, Upper Bound: ${right} → Search LEFT`;
+          } else {
+            this.statusMessage = `Level ${level}: Found ${target} at index ${mid}!`;
+          }
+        } else {
+          this.statusMessage = `Level ${level}: Comparing & merging array [${left}..${right}]`;
+        }
         break;
       case 'merging_write':
-        this.statusMessage = `Level ${level}: Writing merged values for ${range}`;
+        this.statusMessage = `Level ${level}: Writing merged values for [${left}..${right}]`;
         break;
       case 'merged':
-        this.statusMessage = `Level ${level}: Finished merging ${range}`;
+        if (this.selectedAlgorithm === 'binary-search') {
+          const target = (this.mergeInfo as any).target;
+          this.statusMessage = `✓ Found target ${target} at index ${this.mergeInfo.mid}!`;
+        } else {
+          this.statusMessage = `Level ${level}: Finished merging [${left}..${right}]`;
+        }
         break;
       default:
         this.statusMessage = '';
@@ -98,7 +149,7 @@ export class VisualizerComponent {
       if (!this.originalArray || !this.originalArray.length) {
         this.generateArray();
       }
-      this.startSort(this.mergeSortAlgo);
+      this.startSort(this.getSelectedAlgorithm());
     }
 
     if (this.currentStep >= this.steps.length - 1) {
@@ -117,6 +168,16 @@ export class VisualizerComponent {
       this.activeIndices = step.compare ?? step.swap ?? step.overwrite ?? [];
       this.sortedIndices = step.sorted ?? [];
       this.mergeInfo = step.mergeInfo || null;
+      
+      // Track search boundaries for binary search
+      if (this.selectedAlgorithm === 'binary-search' && this.mergeInfo) {
+        this.searchLeft = this.mergeInfo.left;
+        this.searchRight = this.mergeInfo.right;
+      } else {
+        this.searchLeft = -1;
+        this.searchRight = -1;
+      }
+      
       this.updateStatusMessage();
 
       this.currentStepType = step.type;
@@ -132,7 +193,8 @@ export class VisualizerComponent {
 
     this.activeIndices = [];
     this.sortedIndices = [];
-    this.statusMessage = 'Sorting complete!';
+    const completionMessage = this.selectedAlgorithm === 'binary-search' ? 'Search complete!' : 'Sorting complete!';
+    this.statusMessage = completionMessage;
     this.cd.detectChanges();
     this.isPlaying = false;
 }
@@ -161,6 +223,8 @@ export class VisualizerComponent {
     this.sortedIndices=[];
     this.mergeInfo=null;
     this.statusMessage='';
+    this.searchLeft=-1;
+    this.searchRight=-1;
     this.cd.detectChanges();
   }
 
