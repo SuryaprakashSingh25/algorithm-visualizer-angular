@@ -104,7 +104,7 @@ export function mergeSort(arr: number[]): SortStep[]{
             compare: [],
             type: 'compare',
             mergeInfo: {
-                level: currentLevel ,
+                level: currentLevel,
                 left,
                 right,
                 mid,
