@@ -17,6 +17,8 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "baseHref": "/algorithm-visualizer-angular/",
+            "deployUrl": "/algorithm-visualizer-angular/",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
